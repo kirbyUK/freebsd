@@ -1,0 +1,5 @@
+include GENERIC
+makeoptions DEBUG=-g
+options KDB
+options DDB
+options GDB
