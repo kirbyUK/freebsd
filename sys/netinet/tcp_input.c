@@ -1118,6 +1118,7 @@ new_tfo_socket:
 			tp = intotcpcb(inp);
 			KASSERT(tp->t_state == TCPS_SYN_RECEIVED,
 			    ("%s: ", __func__));
+			printf("syn received: 0x%x\n", th->th_seq);
 #ifdef TCP_SIGNATURE
 			if (sig_checked == 0)  {
 				tcp_dooptions(&to, optp, optlen,
@@ -2384,6 +2385,8 @@ tcp_do_segment(struct mbuf *m, struct tcphdr *th, struct socket *so,
 	 * The ACK was checked above.
 	 */
 	case TCPS_SYN_RECEIVED:
+
+		printf("ack number: 0x%x\n", th->th_ack);
 
 		TCPSTAT_INC(tcps_connects);
 		soisconnected(so);
