@@ -704,8 +704,6 @@ tcp_input(struct mbuf *m, int off0)
 	 * pull out TCP options and adjust length.		XXX
 	 */
 	off = th->th_off << 2;
-	printf("I see a packet - SYN 0x%x, ACK: 0x%x\n",
-		th->th_seq, th->th_ack);
 	if (off < sizeof (struct tcphdr) || off > tlen) {
 		TCPSTAT_INC(tcps_rcvbadoff);
 		goto drop;
@@ -1060,7 +1058,7 @@ relocked:
 		 * the flag is only ACK.  A successful lookup creates a new
 		 * socket appended to the listen queue in SYN_RECEIVED state.
 		 */
-		if (((thflags & (TH_RST|TH_ACK|TH_SYN)) == TH_ACK) && (1 == 0)) {
+		if ((thflags & (TH_RST|TH_ACK|TH_SYN)) == TH_ACK) {
 			/*
 			 * Parse the TCP options here because
 			 * syncookies need access to the reflected
@@ -1119,7 +1117,6 @@ new_tfo_socket:
 			tp = intotcpcb(inp);
 			KASSERT(tp->t_state == TCPS_SYN_RECEIVED,
 			    ("%s: ", __func__));
-			printf("syn received: 0x%x\n", th->th_seq);
 #ifdef TCP_SIGNATURE
 			if (sig_checked == 0)  {
 				tcp_dooptions(&to, optp, optlen,
@@ -1139,6 +1136,13 @@ new_tfo_socket:
 				sig_checked = 1;
 			}
 #endif
+			/*
+			 * ST-TCP addition: At this point, if we're
+			 * still the debug, edit the initial sequence
+			 * number.
+			 */
+			if (isbackup)
+				tp->iss = th->th_ack - 1;
 
 			/*
 			 * Process the segment and the data it
@@ -1167,19 +1171,18 @@ new_tfo_socket:
 		/*
 		 * We can't do anything without SYN.
 		 */
-		if (((thflags & TH_SYN) == 0) && (1 == 0)) {
+		if ((thflags & TH_SYN) == 0) {
 			if ((s = tcp_log_addrs(&inc, th, NULL, NULL)))
 				log(LOG_DEBUG, "%s; %s: Listen socket: "
 				    "SYN is missing, segment ignored\n",
 				    s, __func__);
 			TCPSTAT_INC(tcps_badsyn);
-			printf("\tdrop on line 1182\n");
 			goto dropunlock;
 		}
 		/*
 		 * (SYN|ACK) is bogus on a listen socket.
 		 */
-		if ((thflags & TH_ACK) && (1 == 0)) {
+		if (thflags & TH_ACK) {
 			if ((s = tcp_log_addrs(&inc, th, NULL, NULL)))
 				log(LOG_DEBUG, "%s; %s: Listen socket: "
 				    "SYN|ACK invalid, segment rejected\n",
@@ -1187,7 +1190,6 @@ new_tfo_socket:
 			syncache_badack(&inc);	/* XXX: Not needed! */
 			TCPSTAT_INC(tcps_badsyn);
 			rstreason = BANDLIM_RST_OPENPORT;
-			printf("\tdrop on line 1196\n");
 			goto dropwithreset;
 		}
 		/*
@@ -1440,7 +1442,6 @@ dropunlock:
 		INP_WUNLOCK(inp);
 
 drop:
-	printf("\tdropping...\n");
 	INP_INFO_UNLOCK_ASSERT(&V_tcbinfo);
 	if (s != NULL)
 		free(s, M_TCPLOG);
@@ -2389,8 +2390,6 @@ tcp_do_segment(struct mbuf *m, struct tcphdr *th, struct socket *so,
 	 * The ACK was checked above.
 	 */
 	case TCPS_SYN_RECEIVED:
-
-		printf("ack number: 0x%x\n", th->th_ack);
 
 		TCPSTAT_INC(tcps_connects);
 		soisconnected(so);

@@ -1015,6 +1015,13 @@ syncache_expand(struct in_conninfo *inc, struct tcpopt *to, struct tcphdr *th,
 	 * Segment validation:
 	 * ACK must match our initial sequence number + 1 (the SYN|ACK).
 	 */
+	/*
+	 * ST-TCP addition - if this server is the backup, we must alter the
+	 * server's sequence number to match that of the primary. We obtain
+	 * this from the ACK. Hence, this should pass.
+	 */
+	if (isbackup)
+		sc->sc_iss = th->th_ack - 1;
 	if (th->th_ack != sc->sc_iss + 1) {
 		if ((s = tcp_log_addrs(inc, th, NULL, NULL)))
 			log(LOG_DEBUG, "%s; %s: ACK %u != ISS+1 %u, segment "
@@ -1064,12 +1071,17 @@ syncache_expand(struct in_conninfo *inc, struct tcpopt *to, struct tcphdr *th,
 	 * If timestamps were negotiated the reflected timestamp
 	 * must be equal to what we actually sent in the SYN|ACK.
 	 */
-	if ((to->to_flags & TOF_TS) && to->to_tsecr != sc->sc_ts) {
-		if ((s = tcp_log_addrs(inc, th, NULL, NULL)))
-			log(LOG_DEBUG, "%s; %s: TSECR %u != TS %u, "
-			    "segment rejected\n",
-			    s, __func__, to->to_tsecr, sc->sc_ts);
-		goto failed;
+	/*
+	 * ST-TCP addon - just skip this if we are the backup
+	 */
+	if (!isbackup) {
+		if ((to->to_flags & TOF_TS) && to->to_tsecr != sc->sc_ts) {
+			if ((s = tcp_log_addrs(inc, th, NULL, NULL)))
+				log(LOG_DEBUG, "%s; %s: TSECR %u != TS %u, "
+				    "segment rejected\n",
+				    s, __func__, to->to_tsecr, sc->sc_ts);
+			goto failed;
+		}
 	}
 
 	*lsop = syncache_socket(sc, *lsop, m);

@@ -247,6 +247,12 @@ struct tcp_info {
 	/* Padding to grow without breaking ABI. */
 	u_int32_t	__tcpi_pad[26];		/* Padding. */
 };
+
+/*
+ * ST-TCP addition - flag to check if this host is the backup or not
+ */
+extern int isbackup;
+
 #endif
 
 #endif /* !_NETINET_TCP_H_ */

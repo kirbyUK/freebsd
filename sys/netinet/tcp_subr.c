@@ -125,6 +125,11 @@ VNET_DEFINE(int, tcp_mssdflt) = TCP_MSS;
 VNET_DEFINE(int, tcp_v6mssdflt) = TCP6_MSS;
 #endif
 
+/*
+ * ST-TCP addtion - set this to be the backup server
+ */
+int isbackup = 1;
+
 static int
 sysctl_net_inet_tcp_mss_check(SYSCTL_HANDLER_ARGS)
 {
