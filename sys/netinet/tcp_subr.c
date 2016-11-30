@@ -126,9 +126,10 @@ VNET_DEFINE(int, tcp_v6mssdflt) = TCP6_MSS;
 #endif
 
 /*
- * ST-TCP addtion - set this to be the backup server
+ * ST-TCP addtion - backup server flag - off by default. Enabled with the
+ * 'sttcp_mode' syscall.
  */
-int isbackup = 1;
+int isbackup = 0;
 
 static int
 sysctl_net_inet_tcp_mss_check(SYSCTL_HANDLER_ARGS)
